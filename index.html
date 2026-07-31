@@ -866,7 +866,10 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
         <p class="subtitle">月日记账本 · 收支明细 · 公式自动计算</p>
         <div class="money-actions">
           <button class="money-action-btn" id="moneyExport">💾 保存数据</button>
+          <button class="money-action-btn" id="dataBackupBtn" style="border-color:rgba(155,168,224,0.5);color:var(--lav-d)">📥 导出备份</button>
+          <button class="money-action-btn" id="dataRestoreBtn" style="border-color:rgba(181,234,215,0.5);color:var(--mint-d)">📤 导入恢复</button>
           <button class="money-action-btn" id="moneyReset">🔄 清空数据</button>
+          <input type="file" id="dataRestoreInput" accept=".json" style="display:none">
         </div>
       </div>
 
@@ -2102,6 +2105,59 @@ document.getElementById('moneyReset')?.addEventListener('click', () => {
     initMoney();
     toast('当前月份数据已清空');
   }
+});
+
+// ===== 全局数据备份与恢复 =====
+function exportAllData() {
+  const backup = {
+    _version: 6,
+    _exportDate: new Date().toISOString(),
+    todoNotes: JSON.parse(localStorage.getItem('sonya_fang_workbuddy_v4') || '{}'),
+    money: JSON.parse(localStorage.getItem('sonya_fang_money_v5') || '{}'),
+    nail: JSON.parse(localStorage.getItem('sonya_fang_nail_v1') || '{}')
+  };
+  const json = JSON.stringify(backup, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const d = new Date();
+  const stamp = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
+  a.href = url;
+  a.download = `sonya-workbuddy-backup-${stamp}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📥 备份文件已下载');
+}
+
+function importAllData(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const backup = JSON.parse(e.target.result);
+      if (!backup._version) { toast('❌ 文件格式不正确'); return; }
+      if (!confirm('导入将覆盖当前所有数据，确定继续吗？')) return;
+      if (backup.todoNotes) localStorage.setItem('sonya_fang_workbuddy_v4', JSON.stringify(backup.todoNotes));
+      if (backup.money) localStorage.setItem('sonya_fang_money_v5', JSON.stringify(backup.money));
+      if (backup.nail) localStorage.setItem('sonya_fang_nail_v1', JSON.stringify(backup.nail));
+      toast('✅ 数据已恢复，即将刷新...');
+      setTimeout(() => location.reload(), 1200);
+    } catch (err) {
+      toast('❌ 导入失败：文件格式错误');
+    }
+  };
+  reader.readAsText(file);
+}
+
+document.getElementById('dataBackupBtn')?.addEventListener('click', exportAllData);
+document.getElementById('dataRestoreBtn')?.addEventListener('click', () => {
+  document.getElementById('dataRestoreInput')?.click();
+});
+document.getElementById('dataRestoreInput')?.addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (file) importAllData(file);
+  e.target.value = '';
 });
 
 // 初始化：加载数据，默认显示首月

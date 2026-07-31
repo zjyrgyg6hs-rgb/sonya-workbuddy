@@ -737,6 +737,13 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
 }
 .nail-summary-grid div span{display:block;font-size:11px;color:var(--ink-soft);margin-bottom:4px;}
 .nail-summary-grid div b{font-size:16px;color:var(--ink);}
+.nail-daily-summary{margin-top:14px;padding-top:14px;border-top:1px dashed rgba(199,206,234,0.5);}
+.nail-daily-table{width:100%;border-collapse:separate;border-spacing:0;font-size:11px;}
+.nail-daily-table th,.nail-daily-table td{padding:6px 4px;text-align:center;vertical-align:middle;}
+.nail-daily-table th{background:rgba(255,255,255,0.6);font-weight:700;color:var(--ink-soft);border-radius:8px;}
+.nail-daily-table th.today{background:var(--lav);color:var(--ink);}
+.nail-daily-table td{background:rgba(255,243,176,0.2);border-radius:8px;font-weight:600;color:var(--ink);}
+.nail-daily-table td.label{text-align:right;font-weight:700;color:var(--ink-soft);background:transparent;font-size:11px;min-width:50px;}
 @media (max-width:640px){
   .nail-summary-grid{grid-template-columns:repeat(2,1fr);}
   .nail-week-info{padding:12px 14px;min-width:auto;}
@@ -1053,9 +1060,23 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
             </tbody>
           </table>
         </div>
-      </div>
 
-      <!-- 本周汇总 -->
+        <!-- 每日汇总 -->
+        <div class="nail-daily-summary">
+          <div class="nail-summary-title" style="margin-bottom:8px;">📆 每日汇总</div>
+          <table class="money-table nail-daily-table" id="nailDailySummary">
+            <thead>
+              <tr id="nailDailyHead"></tr>
+            </thead>
+            <tbody>
+              <tr id="nailDailyPrice"></tr>
+              <tr id="nailDailyCommission"></tr>
+              <tr id="nailDailyTips"></tr>
+              <tr id="nailDailyTotal"></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
       <div class="nail-summary-card">
         <div class="nail-summary-title">📊 本周汇总</div>
         <div class="nail-summary-grid">
@@ -2423,6 +2444,60 @@ function recomputeNail() {
   document.getElementById('nailMonthCommission').textContent = fmt(mCommission);
   document.getElementById('nailMonthTips').textContent = fmt(mTips);
   document.getElementById('nailMonthIncome').textContent = fmt(mIncome);
+
+  // ===== 每日汇总：7天 x (价格/抽成/Tips/总收入) =====
+  const weekStart2 = getWeekStart(nailCurrentWeek);
+  const weekDays = getWeekDays(weekStart2);
+  const todayKey = formatDate(new Date());
+  const dayLabels = ['日','一','二','三','四','五','六'];
+
+  // 表头
+  let headHtml = '<th class="label">日期</th>';
+  weekDays.forEach(d => {
+    const isToday = d.key === todayKey;
+    headHtml += `<th class="${isToday ? 'today' : ''}">${dayLabels[new Date(d.key).getDay()]} ${d.date.getMonth()+1}/${d.date.getDate()}</th>`;
+  });
+  document.getElementById('nailDailyHead').innerHTML = headHtml;
+
+  // 每天的数据（从按天存储读取）
+  let dailyPrice = [], dailyComm = [], dailyTips = [], dailyTotal = [];
+  weekDays.forEach(d => {
+    // 从按天存储读取
+    const dayData = nailData[d.key];
+    let dp = 0, dt = 0;
+    if (dayData) {
+      dayData.forEach(col => {
+        dp += num(col.price);
+        dt += num(col.tips);
+      });
+    }
+    const dc = dp * 0.5;
+    const dtotal = dc + dt;
+    dailyPrice.push(dp);
+    dailyComm.push(dc);
+    dailyTips.push(dt);
+    dailyTotal.push(dtotal);
+  });
+
+  // 价格行
+  let priceRow = '<td class="label">价格</td>';
+  dailyPrice.forEach(v => { priceRow += `<td>${fmt(v)}</td>`; });
+  document.getElementById('nailDailyPrice').innerHTML = priceRow;
+
+  // 抽成行
+  let commRow = '<td class="label">抽成</td>';
+  dailyComm.forEach(v => { commRow += `<td>${fmt(v)}</td>`; });
+  document.getElementById('nailDailyCommission').innerHTML = commRow;
+
+  // Tips行
+  let tipsRow = '<td class="label">Tips</td>';
+  dailyTips.forEach(v => { tipsRow += `<td>${fmt(v)}</td>`; });
+  document.getElementById('nailDailyTips').innerHTML = tipsRow;
+
+  // 总收入行
+  let totalRow = '<td class="label">总收入</td>';
+  dailyTotal.forEach(v => { totalRow += `<td>${fmt(v)}</td>`; });
+  document.getElementById('nailDailyTotal').innerHTML = totalRow;
 }
 
 document.getElementById('nailPrevWeek')?.addEventListener('click', () => {

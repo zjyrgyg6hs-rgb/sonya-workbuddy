@@ -247,6 +247,34 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
 }
 .day-detail-close:hover{background:var(--pink-d);color:white;transform:rotate(90deg);}
 
+/* 月度打卡统计 */
+.todo-month-stats{
+  background:rgba(255,255,255,0.88);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-radius:24px;padding:20px;
+  box-shadow:0 8px 24px rgba(0,0,0,0.06);
+  border:1px solid rgba(255,182,217,0.3);
+  margin-bottom:18px;
+}
+.todo-stats-title{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:14px;}
+.todo-stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;}
+.todo-stats-item{
+  background:linear-gradient(135deg,rgba(255,182,217,0.25),rgba(199,206,234,0.25));
+  border-radius:18px;padding:16px 8px;text-align:center;
+  border:1px solid rgba(255,255,255,0.6);
+}
+.todo-stats-icon{font-size:28px;margin-bottom:6px;}
+.todo-stats-name{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:4px;}
+.todo-stats-count{display:flex;align-items:baseline;justify-content:center;gap:3px;}
+.todo-stats-count b{font-size:24px;font-weight:800;color:var(--pink-d);}
+.todo-stats-count span{font-size:11px;color:var(--ink-soft);}
+.todo-stats-total{
+  text-align:center;font-size:13px;color:var(--ink-soft);
+  padding-top:12px;border-top:1px dashed rgba(255,182,217,0.4);
+}
+.todo-stats-total b{color:var(--pink-d);font-size:16px;font-weight:800;}
+@media(max-width:480px){.todo-stats-grid{gap:8px;}.todo-stats-item{padding:12px 4px;}.todo-stats-icon{font-size:22px;}.todo-stats-count b{font-size:20px;}}
+
 .task-slot-count{
   font-size:11px;color:var(--ink-soft);margin-bottom:10px;
   display:flex;justify-content:space-between;align-items:center;
@@ -857,6 +885,29 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
           <button class="add-day-task-big" id="detailAddTask">+ 新增任务</button>
         </div>
       </div>
+
+      <!-- 月度打卡统计 -->
+      <div class="todo-month-stats" id="todoMonthStats">
+        <div class="todo-stats-title">📊 月度打卡统计</div>
+        <div class="todo-stats-grid" id="todoStatsGrid">
+          <div class="todo-stats-item">
+            <div class="todo-stats-icon">🍽️</div>
+            <div class="todo-stats-name">Restaurant</div>
+            <div class="todo-stats-count"><b id="statRestaurant">0</b><span>天</span></div>
+          </div>
+          <div class="todo-stats-item">
+            <div class="todo-stats-icon">💅</div>
+            <div class="todo-stats-name">Nail Salon</div>
+            <div class="todo-stats-count"><b id="statNailSalon">0</b><span>天</span></div>
+          </div>
+          <div class="todo-stats-item">
+            <div class="todo-stats-icon">😴</div>
+            <div class="todo-stats-name">Off</div>
+            <div class="todo-stats-count"><b id="statOff">0</b><span>天</span></div>
+          </div>
+        </div>
+        <div class="todo-stats-total">本月共打卡 <b id="statTotal">0</b> 天</div>
+      </div>
     </section>
 
     <!-- ========== 2. Account Money ========== -->
@@ -1349,6 +1400,37 @@ function renderCalendar() {
     div.textContent = i;
     grid.appendChild(div);
   }
+  // 统计本月打卡
+  renderTodoStats(y, m);
+}
+
+function renderTodoStats(y, m) {
+  const days = new Date(y, m + 1, 0).getDate();
+  let rCount = 0, nCount = 0, oCount = 0, totalDays = 0;
+  for (let d = 1; d <= days; d++) {
+    const dateKey = `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const tasks = state.todo[dateKey];
+    if (tasks) {
+      let hasDone = false;
+      tasks.forEach(t => {
+        if (t && t.done) {
+          hasDone = true;
+          if (t.text === 'Restaurant') rCount++;
+          else if (t.text === 'Nail Salon') nCount++;
+          else if (t.text === 'Off') oCount++;
+        }
+      });
+      if (hasDone) totalDays++;
+    }
+  }
+  const r = document.getElementById('statRestaurant');
+  const n = document.getElementById('statNailSalon');
+  const o = document.getElementById('statOff');
+  const t = document.getElementById('statTotal');
+  if (r) r.textContent = rCount;
+  if (n) n.textContent = nCount;
+  if (o) o.textContent = oCount;
+  if (t) t.textContent = totalDays;
 }
 
 function showDayDetail(dateKey) {

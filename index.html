@@ -886,7 +886,7 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
       <!-- 1. 每月账单记录 -->
       <div class="money-table-card c1">
         <h3>📋 每月账单记录</h3>
-        <p class="table-formula">公式：现金结余 = 现金总收入 − 现金总支出；银行结余 = 银行总收入 − 银行总支出</p>
+        <p class="table-formula">公式：现金结余 = 月初已有 + 现金总收入 − 现金总支出；银行结余 = 月初已有 + 银行总收入 − 银行总支出</p>
         <div class="bill-summary">
           <div class="bill-card cash-card">
             <div class="bill-card-head">
@@ -1874,6 +1874,7 @@ function recomputeFormulas() {
 
   // ===== 总资产表（10行，所有行的收入/支出都从明细表按账户汇总自动取数） =====
   let cs = 0, bk = 0, ew = 0, ci = 0, co = 0, bi = 0, bo = 0;
+  let csStart = 0, bkStart = 0, ewStart = 0; // 各类月初已有合计
   let savingUsdBal = 0, insuranceBal = 0;
   document.querySelectorAll('#at tbody tr').forEach((r, i) => {
     if (i >= 10) return;
@@ -1917,9 +1918,9 @@ function recomputeFormulas() {
     if (expenseCell) expenseCell.textContent = fmt(c);
     if (balCell) balCell.textContent = fmt(bal);
 
-    if (rowType === 'cash') { cs += bal; ci += b; co += c; }
-    else if (rowType === 'bank') { bk += bal; bi += b; bo += c; }
-    else if (rowType === 'ew') { ew += bal; bi += b; bo += c; }
+    if (rowType === 'cash') { cs += bal; ci += b; co += c; csStart += a; }
+    else if (rowType === 'bank') { bk += bal; bi += b; bo += c; bkStart += a; }
+    else if (rowType === 'ew') { ew += bal; bi += b; bo += c; ewStart += a; }
     else if (rowType === 'saving-usd') { savingUsdBal += bal; }
     else if (rowType === 'insurance') { insuranceBal += bal; }
   });
@@ -1927,10 +1928,13 @@ function recomputeFormulas() {
   document.getElementById('bankSub').textContent = fmt(bk);
   document.getElementById('ewSub').textContent = fmt(ew);
   document.getElementById('grandT').textContent = fmt(cs + bk + ew + savingUsdBal + insuranceBal);
-  document.getElementById('cashBal').textContent = fmt(ci - co);
+  // 公式：结余 = 月初已有 + 总收入 − 总支出
+  document.getElementById('cashBal').textContent = fmt(csStart + ci - co);
   document.getElementById('cashIn').textContent = fmt(ci);
   document.getElementById('cashOut').textContent = fmt(co);
-  document.getElementById('bankBal').textContent = fmt(bi - bo);
+  // 银行+电子钱包合并显示
+  let allBankStart = bkStart + ewStart;
+  document.getElementById('bankBal').textContent = fmt(allBankStart + bi - bo);
   document.getElementById('bankIn').textContent = fmt(bi);
   document.getElementById('bankOut').textContent = fmt(bo);
 

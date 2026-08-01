@@ -886,7 +886,7 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
       <!-- 1. 每月账单记录 -->
       <div class="money-table-card c1">
         <h3>📋 每月账单记录</h3>
-        <p class="table-formula">公式：现金结余 = 月初已有 + 现金总收入 − 现金总支出；银行结余 = 月初已有 + 银行总收入 − 银行总支出</p>
+        <p class="table-formula">公式：现金结余 = 月初总额 + 现金总收入 − 现金总支出；银行结余 = 月初总额 + 银行总收入 − 银行总支出</p>
         <div class="bill-summary">
           <div class="bill-card cash-card">
             <div class="bill-card-head">
@@ -913,10 +913,10 @@ body::after{bottom:18%;right:7%;animation-delay:-6s;font-size:20px;color:var(--l
 
       <!-- 2. 月度总资产表 -->
       <div class="money-table-card c2">
-        <h3>🏦 月度总资产表 <span style="font-size:10px;color:var(--ink-soft);font-weight:normal">余额=月初已有+本月收入−本月支出｜月初已有=上月余额（首月可自填）</span></h3>
+        <h3>🏦 月度总资产表 <span style="font-size:10px;color:var(--ink-soft);font-weight:normal">余额=月初总额+本月收入−本月支出｜月初总额=上月余额（首月可自填）</span></h3>
         <div class="table-wrap">
           <table class="money-table ledger-table" id="at">
-            <thead><tr><th>#</th><th>类别</th><th>月初已有</th><th>本月收入</th><th>本月支出</th><th>余额</th><th>备注</th></tr></thead>
+            <thead><tr><th>#</th><th>类别</th><th>月初总额</th><th>本月收入</th><th>本月支出</th><th>余额</th><th>备注</th></tr></thead>
             <tbody id="assetsBody"></tbody>
             <tfoot>
               <tr class="subtotal"><td colspan="5" style="text-align:right">现金小计</td><td class="auto" id="cashSub">0.00</td><td></td></tr>
@@ -1599,7 +1599,7 @@ function switchMonth(y, m) {
   const key = monthKey(y, m);
   if (!allMoneyData[key]) {
     allMoneyData[key] = defaultMonthData();
-    // 余额结转：从上个月的余额自动填入"月初已有"
+    // 余额结转：从上个月的余额自动填入"月初总额"
     applyCarryover(y, m);
   }
   moneyData = allMoneyData[key];
@@ -1608,18 +1608,18 @@ function switchMonth(y, m) {
   initMoney();
 }
 
-// --- 余额结转公式：从上个月的余额代入本月的"月初已有" ---
+// --- 余额结转公式：从上个月的余额代入本月的"月初总额" ---
 function applyCarryover(y, m) {
   const pKey = prevMonthKey(y, m);
   const prev = allMoneyData[pKey];
   if (!prev || !prev.assets) return; // 上月无数据，不结转
   const key = monthKey(y, m);
   const cur = allMoneyData[key];
-  // 计算上月每行的余额 = 月初已有 + 本月收入 - 本月支出
+  // 计算上月每行的余额 = 月初总额 + 本月收入 - 本月支出
   prev.assets.forEach((a, i) => {
     const bal = num(a.start) + num(a.income) - num(a.expense);
     if (cur.assets[i]) {
-      cur.assets[i].start = bal; // 代入上月余额作为本月月初已有
+      cur.assets[i].start = bal; // 代入上月余额作为本月月初总额
     }
   });
 }
@@ -1660,7 +1660,7 @@ function renderAssets() {
   moneyData.assets.forEach((row, i) => {
     const tr = document.createElement('tr');
     tr.dataset.t = row.type;
-    // 首月月初已有可自填；非首月为自动结转（只读显示）
+    // 首月月初总额可自填；非首月为自动结转（只读显示）
     const startCell = isFirst
       ? `<td class="editable"><input type="number" data-sec="assets" data-field="start" data-idx="${i}" value="${esc(row.start)}"></td>`
       : `<td class="auto calc" title="自动从上月余额结转">${esc(row.start || 0)}</td>`;
@@ -1874,13 +1874,13 @@ function recomputeFormulas() {
 
   // ===== 总资产表（10行，所有行的收入/支出都从明细表按账户汇总自动取数） =====
   let cs = 0, bk = 0, ew = 0, ci = 0, co = 0, bi = 0, bo = 0;
-  let csStart = 0, bkStart = 0, ewStart = 0; // 各类月初已有合计
+  let csStart = 0, bkStart = 0, ewStart = 0; // 各类月初总额合计
   let savingUsdBal = 0, insuranceBal = 0;
   document.querySelectorAll('#at tbody tr').forEach((r, i) => {
     if (i >= 10) return;
     const rowData = moneyData.assets[i];
     const rowType = r.dataset.t;
-    // 月初已有：首月从 input 读取，非首月从 moneyData 读取
+    // 月初总额：首月从 input 读取，非首月从 moneyData 读取
     const isFirst = isFirstMonth(moneyCurrentMonth.y, moneyCurrentMonth.m);
     let a;
     if (isFirst) {
@@ -1897,7 +1897,7 @@ function recomputeFormulas() {
 
     // 更新只读的 income / expense / 余额 显示
     let calcCells = r.querySelectorAll('.calc');
-    // calcCells 顺序：非首月=[income, expense, 余额]；首月=[月初已有(只读文本), income, expense, 余额]
+    // calcCells 顺序：非首月=[income, expense, 余额]；首月=[月初总额(只读文本), income, expense, 余额]
     // 但现在 income/expense 都是 .auto.calc，余额也是 .auto.calc
     // 需要更新最后3个 calc：income, expense, 余额
     // 非首月：calcCells = [startText, incomeCell, expenseCell, balCell]
@@ -1928,7 +1928,7 @@ function recomputeFormulas() {
   document.getElementById('bankSub').textContent = fmt(bk);
   document.getElementById('ewSub').textContent = fmt(ew);
   document.getElementById('grandT').textContent = fmt(cs + bk + ew + savingUsdBal + insuranceBal);
-  // 公式：结余 = 月初已有 + 总收入 − 总支出
+  // 公式：结余 = 月初总额 + 总收入 − 总支出
   document.getElementById('cashBal').textContent = fmt(csStart + ci - co);
   document.getElementById('cashIn').textContent = fmt(ci);
   document.getElementById('cashOut').textContent = fmt(co);
